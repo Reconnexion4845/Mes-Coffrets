@@ -95,7 +95,7 @@
     </form>
 <script>
     // lien de ton Apps Script Web App (à modifier avec ton déploiement exact)
-    const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyijamioJT6nil9BYyHCXNt3bWOWrRYat7EkXd1ApiF0StUpBvW1mAYED4dMFu1x6EV/exec";
+    const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzz3yIkMTrAlUOSBk9FipnslsMeErs2GU_n0JaNwVENyAXvkcZv-qP7HOv046moJqnV/exec";
 
     let coffrets = [];
     let totalPrix = 0;
@@ -107,7 +107,7 @@
 
     // Charge automatique depuis GitHub
     window.addEventListener("load", () => {
-        const githubFileUrl = "https://script.google.com/macros/s/AKfycbwDOt8iKiw7eFNGKRPrp3G-yFeXL0RKvKv2KYU26yp753AOcRe9EYyYHnj8qwPqidnN/exec";
+        const githubFileUrl = "https://raw.githubusercontent.com/Reconnexion4845/Mes-Coffrets/main/Coffrets.xlsx";
         fetch(githubFileUrl)
           .then(response => {
               if (!response.ok) throw new Error("Fichier non trouvé");
