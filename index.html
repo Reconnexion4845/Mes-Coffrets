@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
     <title>Commandez mes Coffrets</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <style>
+        /* Styles inchangés… */
         body { font-family: Arial, sans-serif; }
         h1 { color: #b20000; font-size: 2em; margin-top: 28px; }
         .coffret-row { display: flex; align-items: center; margin-bottom: 32px; }
@@ -38,8 +39,9 @@
     <h1>Commandez mes Coffrets</h1>
     <div class="file-zone">
         <h2>Importer vos coffrets (Coffrets.xlsx)</h2>
-        <input type="file" id="file-input" accept=".xlsx">
+        <input type="file" id="file-input" accept=".xlsx" style="display:none;">
         <div class="instructions">
+            <!-- instructions inchangées… -->
             <div><strong>Voici la marche à suivre :</strong></div>
             <div style="margin: 10px 0 6px 0;">
                 <strong>1. Remplissez le formulaire ci-dessous</strong>
@@ -51,15 +53,15 @@
                 </ul>
             </div>
             <div style="margin: 10px 0 6px 0;">
-                <strong>2. Effectuez ensuite le <span style="color:#000000;">paiement par virement</span></strong> sur le compte de l'institut<br>
-                <strong>BE08 3631 9500 6113</strong> au nom de <strong>Victoria Winkin (Reconnexion)</strong>,<br>
+                <strong>2. Effectuez ensuite le <span style="color:#000000;">paiement par virement</span></strong> sur le compte de l'institut<br />
+                <strong>BE08 3631 9500 6113</strong> au nom de <strong>Victoria Winkin (Reconnexion)</strong>,<br />
                 avec la communication suivante : Coffrets + vos nom et prénom.
             </div>
             <div class="calendar-line">
-                <span class="calendar-icon" title="Date de clôture">🗓️</span>
+                <span class="calendar-icon" title="Date de clôture">🗓️<span style="font-size:1.0em;position:relative;left:-14px;top:6px;">8</span></span>
                 <span>Clôture des commandes : <strong>8 décembre.</strong></span>
             </div>
-            <div style="margin:10px 0 2px 0;">Votre commande sera <strong>validée dès réception du paiement</strong>.<br>
+            <div style="margin:10px 0 2px 0;">Votre commande sera <strong>validée dès réception du paiement</strong>.<br />
                 Vous recevrez un <strong>e-mail</strong> dès qu’elle sera prête à être retirée à l’institut.
             </div>
         </div>
@@ -69,15 +71,15 @@
             <div id="form-error" class="error-msg" style="display:none;"></div>
             <div class="input-field">
                 <label for="nom_prenom" class="required">Nom et prénom</label>
-                <input type="text" id="nom_prenom" name="nom_prenom" required>
+                <input type="text" id="nom_prenom" name="nom_prenom" required />
             </div>
             <div class="input-field">
                 <label for="email" class="required">Adresse mail</label>
-                <input type="email" id="email" name="email" required>
+                <input type="email" id="email" name="email" required />
             </div>
             <div class="input-field">
                 <label for="tel" class="required">Téléphone</label>
-                <input type="tel" id="tel" name="tel" required pattern="[0-9+\s\-]+">
+                <input type="tel" id="tel" name="tel" required pattern="[0-9+\s\-]+" />
             </div>
             <div class="input-field">
                 <label for="infos">Informations complémentaires</label>
@@ -99,6 +101,53 @@
             if (cell === null || cell === undefined) return [];
             return String(cell).split(/\r\n|\n|\r/);
         }
+
+        // Charge automatique depuis GitHub (changer USERNAME & REPOSITORY)
+        window.addEventListener("load", () => {
+            const githubFileUrl = "https://raw.githubusercontent.com/Reconnexion4845/Mes-Coffrets/main/Coffrets.xlsx";
+            fetch(githubFileUrl)
+                .then(response => {
+                    if (!response.ok) throw new Error("Fichier non trouvé");
+                    return response.arrayBuffer();
+                })
+                .then(data => {
+                    const workbook = XLSX.read(new Uint8Array(data), { type: "array" });
+                    const sheet = workbook.Sheets["Coffrets"];
+                    if (!sheet) return;
+                    const rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval: ""});
+                    coffrets = [];
+                    for(let i=1; i<rows.length; i++) {
+                        const row = rows[i];
+                        if (!row[0]) continue;
+                        let nom = row[0];
+                        let rawPrix = row[4];
+                        let prix = 0;
+                        if (typeof rawPrix === 'string') {
+                            prix = parseFloat(rawPrix.replace(",", ".")) || 0;
+                        } else if (typeof rawPrix === 'number') {
+                            prix = rawPrix;
+                        }
+                        let lignesB = splitLines(row[1]);
+                        let lignesC = splitLines(row[2]);
+                        let lignesD = splitLines(row[3]);
+                        let nbProduits = Math.max(lignesB.length, lignesC.length, lignesD.length);
+                        let produits = [];
+                        for (let l=0; l<nbProduits; l++) {
+                            let quantite = lignesB[l] !== undefined ? lignesB[l] : "";
+                            let code = lignesC[l] !== undefined ? lignesC[l] : "";
+                            let nomProd = lignesD[l] !== undefined ? lignesD[l] : "";
+                            if (quantite || code || nomProd)
+                                produits.push({ quantite, code, nom: nomProd });
+                        }
+                        coffrets.push({ nom, prix, produits, quantite: 0, idx: i });
+                    }
+                    afficherCoffrets();
+                })
+                .catch(e => {
+                    console.warn("Erreur chargement Coffrets.xlsx :", e.message);
+                    document.getElementById("file-input").style.display = "inline-block";
+                });
+        });
 
         document.getElementById('file-input').addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -218,12 +267,8 @@
                 return;
             }
 
-            // Si tout est OK, validation (bouton ne change pas et ne se désactive pas)
-            alert("Commande validée !");
-            // Ici on peut aller plus loin côté serveur ou autre ensuite
-
-            // Réinitialiser le formulaire et affichage
-            annulerCommande();
+            // Redirection vers merci.html
+            window.location.href = "merci.html";
         });
     </script>
 </body>
