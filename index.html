@@ -2,10 +2,11 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Coffrets - Commande</title>
+    <title>Commandez mes Coffrets</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; }
+        h1 { color: #b20000; font-size: 2em; margin-top: 28px; }
         .coffret-row { display: flex; align-items: center; margin-bottom: 32px; }
         .coffret-quantite { width: 45px; margin-right: 30px; text-align: center; height: 34px; font-size: 1.15em; }
         .coffret-block { display: flex; align-items: center; }
@@ -18,26 +19,83 @@
             padding: 3px 9px 3px 0; vertical-align: middle; border: none; }
         #price-total { font-size: 1.15em; font-weight: bold; margin: 20px 0 15px 0; color: #222; }
         .action-btns { margin-top: 20px; }
-        .action-btns button { width: 160px; margin: 0 12px; padding: 10px; font-size: 1em; }
+        .action-btns button { width: 160px; margin: 0 12px; padding: 10px; font-size: 1em; cursor: pointer; }
         .file-zone { margin-bottom: 30px; }
+        .instructions { background: #f7f0f0; border-radius: 8px; padding: 18px 20px 12px 16px; margin: 26px 0 32px 0; }
+        .instructions strong { color: #000000; }
+        .calendar-line { display: flex; align-items: center; font-size: 1.08em; margin-top: 10px; }
+        .calendar-icon { font-size: 1.18em; margin-right: 8px; }
+        .input-zone { margin: 35px 0 35px 0; }
+        .input-field { display: flex; flex-direction: column; margin-bottom: 15px; }
+        .input-field label { font-weight: bold; color: #000000; margin-bottom: 5px; }
+        .input-field input, .input-field textarea {
+            padding: 8px 10px; border-radius: 4px; border: 1px solid #ccc; font-size: 1em; }
+        .required::after { content: " *"; color: #000000; }
+        .error-msg { color: #b20000; font-size: 1em; margin-bottom: 10px; }
     </style>
 </head>
 <body>
+    <h1>Commandez mes Coffrets</h1>
     <div class="file-zone">
         <h2>Importer vos coffrets (Coffrets.xlsx)</h2>
         <input type="file" id="file-input" accept=".xlsx">
+        <div class="instructions">
+            <div><strong>Voici la marche à suivre :</strong></div>
+            <div style="margin: 10px 0 6px 0;">
+                <strong>1. Remplissez le formulaire ci-dessous</strong>
+                <ul style="margin: 4px 0 0 10px; padding-left: 18px;">
+                    <li>Indiquez la <strong>quantité souhaitée</strong> devant chaque coffret que vous souhaitez commander.</li>
+                    <li>Le <strong>montant à payer</strong> s’affichera au-dessus du bouton de commande.</li>
+                    <li>Si l’un des coffrets choisis contient un <strong>bon cadeau</strong>, veuillez préciser dans le champ "&lt;strong&gt;Infos complémentaires&lt;/strong&gt;" <br>pour qui est le bon et de la part de qui.</li>
+                    <li>Et cliquez sur <strong>« Passer la commande »</strong>.</li>
+                </ul>
+            </div>
+            <div style="margin: 10px 0 6px 0;">
+                <strong>2. Effectuez ensuite le <span style="color:#000000;">paiement par virement</span></strong> sur le compte de l'institut<br>
+                <strong>BE08 3631 9500 6113</strong> au nom de <strong>Victoria Winkin (Reconnexion)</strong>,<br>
+                avec la communication suivante : Coffrets + vos nom et prénom.
+            </div>
+            <div class="calendar-line">
+                <span class="calendar-icon" title="Date de clôture">🗓️<span style="font-size:1.0em;position:relative;left:-14px;top:6px;">8</span></span>
+                <span>Clôture des commandes : <strong>8 décembre.</strong></span>
+            </div>
+            <div style="margin:10px 0 2px 0;">Votre commande sera <strong>validée dès réception du paiement</strong>.<br>
+                Vous recevrez un <strong>e-mail</strong> dès qu’elle sera prête à être retirée à l’institut.
+            </div>
+        </div>
     </div>
-    <div id="coffrets-container"></div>
-    <div id="price-total"></div>
-    <div class="action-btns">
-        <button onclick="passerCommande()">Passer la commande</button>
-        <button onclick="annulerCommande()">Annuler</button>
-    </div>
+    <form id="commande-form">
+        <div class="input-zone">
+            <div id="form-error" class="error-msg" style="display:none;"></div>
+            <div class="input-field">
+                <label for="nom_prenom" class="required">Nom et prénom</label>
+                <input type="text" id="nom_prenom" name="nom_prenom" required>
+            </div>
+            <div class="input-field">
+                <label for="email" class="required">Adresse mail</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="input-field">
+                <label for="tel" class="required">Téléphone</label>
+                <input type="tel" id="tel" name="tel" required pattern="[0-9+\s\-]+">
+            </div>
+            <div class="input-field">
+                <label for="infos">Informations complémentaires</label>
+                <textarea id="infos" name="infos" rows="2"></textarea>
+            </div>
+        </div>
+        <div id="coffrets-container"></div>
+        <div id="price-total"></div>
+        <div class="action-btns">
+            <button type="submit" id="commande-btn">Passer la commande</button>
+            <button type="button" onclick="annulerCommande()">Annuler</button>
+        </div>
+    </form>
     <script>
         let coffrets = [];
+        let totalPrix = 0;
 
         function splitLines(cell) {
-            // Découpe en lignes, gère tous types de retour Excel (merci à forum.uipath.com[web:11])
             if (cell === null || cell === undefined) return [];
             return String(cell).split(/\r\n|\n|\r/);
         }
@@ -50,14 +108,12 @@
                 const data = new Uint8Array(e2.target.result);
                 const workbook = XLSX.read(data, {type: 'array'});
                 const sheet = workbook.Sheets["Coffrets"];
-
-                // Extraction brute (lignes, colonnes)
+                if (!sheet) return;
                 const rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval: ""});
                 coffrets = [];
-                for(let i=1; i<rows.length; i++) { // start at 1 (skip headers)
+                for(let i=1; i<rows.length; i++) {
                     const row = rows[i];
-                    if (!row[0]) continue; // ignorer lignes vides
-                    // Nom coffret et prix
+                    if (!row[0]) continue;
                     let nom = row[0];
                     let rawPrix = row[4];
                     let prix = 0;
@@ -66,18 +122,15 @@
                     } else if (typeof rawPrix === 'number') {
                         prix = rawPrix;
                     }
-                    // Split lignes produits
                     let lignesB = splitLines(row[1]);
                     let lignesC = splitLines(row[2]);
                     let lignesD = splitLines(row[3]);
-                    // Le nombre de produits = max des longueurs B, C, D
                     let nbProduits = Math.max(lignesB.length, lignesC.length, lignesD.length);
                     let produits = [];
                     for (let l=0; l<nbProduits; l++) {
                         let quantite = lignesB[l] !== undefined ? lignesB[l] : "";
                         let code = lignesC[l] !== undefined ? lignesC[l] : "";
                         let nomProd = lignesD[l] !== undefined ? lignesD[l] : "";
-                        // N'afficher que si produit non vide
                         if (quantite || code || nomProd)
                             produits.push({ quantite, code, nom: nomProd });
                     }
@@ -91,11 +144,9 @@
         function afficherCoffrets() {
             const container = document.getElementById('coffrets-container');
             container.innerHTML = '';
-            coffrets.forEach(coffret => {
-                // Create row
+            coffrets.forEach((coffret) => {
                 const row = document.createElement('div');
                 row.className = 'coffret-row';
-                // Quantité input
                 const input = document.createElement('input');
                 input.type = 'number'; input.min = '0'; input.value = '0';
                 input.className = 'coffret-quantite';
@@ -105,16 +156,13 @@
                     calculerPrixTotal();
                 });
                 row.appendChild(input);
-                // Bloc principal
                 const block = document.createElement('div');
                 block.className = 'coffret-block';
-                // Nom/prix
                 const header = document.createElement('div');
                 header.className = 'coffret-header';
                 header.innerHTML = `<span class="coffret-titre">${coffret.nom}</span>
                                     <span class="coffret-prix">${coffret.prix.toFixed(2)} €</span>`;
                 block.appendChild(header);
-                // Tableau produits
                 const table = document.createElement('table');
                 table.className = 'coffret-produits-table';
                 coffret.produits.forEach(prod => {
@@ -133,21 +181,50 @@
         }
 
         function calculerPrixTotal() {
-            let total = 0;
+            totalPrix = 0;
             coffrets.forEach(c => {
-                total += (c.quantite || 0) * c.prix;
+                totalPrix += (c.quantite || 0) * c.prix;
             });
-            document.getElementById('price-total').innerText = "Prix à payer : " + total.toFixed(2) + " €";
+            document.getElementById('price-total').innerText = "Prix à payer : " + totalPrix.toFixed(2) + " €";
         }
 
-        function passerCommande() {
-            alert("Commande validée !");
-            // Ajoutez votre logique
-        }
         function annulerCommande() {
             coffrets.forEach(c => c.quantite = 0);
             afficherCoffrets();
+            document.getElementById('commande-form').reset();
+            document.getElementById('form-error').style.display = "none";
         }
+
+        document.getElementById('commande-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const errorDiv = document.getElementById('form-error');
+            errorDiv.style.display = "none";
+            errorDiv.innerText = "";
+
+            // Vérifier champs obligatoires
+            const nomPrenom = document.getElementById('nom_prenom').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const tel = document.getElementById('tel').value.trim();
+            if (!nomPrenom || !email || !tel) {
+                errorDiv.style.display = "block";
+                errorDiv.innerText = "Veuillez renseigner tous les champs obligatoires (*)";
+                return;
+            }
+
+            // Vérifier montant à payer
+            if (totalPrix <= 0) {
+                errorDiv.style.display = "block";
+                errorDiv.innerText = "Le montant à payer doit être supérieur à zéro pour valider la commande.";
+                return;
+            }
+
+            // Si tout est OK, validation (bouton ne change pas et ne se désactive pas)
+            alert("Commande validée !");
+            // Ici on peut aller plus loin côté serveur ou autre ensuite
+
+            // Réinitialiser le formulaire et affichage
+            annulerCommande();
+        });
     </script>
 </body>
 </html>
