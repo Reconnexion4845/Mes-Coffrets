@@ -93,183 +93,209 @@
             <button type="button" onclick="annulerCommande()">Annuler</button>
         </div>
     </form>
-    <script>
-        let coffrets = [];
-        let totalPrix = 0;
+<script>
+    // lien de ton Apps Script Web App (à modifier avec ton déploiement exact)
+    const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/TON_DEPLOIEMENT_ID/exec";
 
-        function splitLines(cell) {
-            if (cell === null || cell === undefined) return [];
-            return String(cell).split(/\r\n|\n|\r/);
-        }
+    let coffrets = [];
+    let totalPrix = 0;
 
-        // Charge automatique depuis GitHub (changer USERNAME & REPOSITORY)
-        window.addEventListener("load", () => {
-            const githubFileUrl = "https://raw.githubusercontent.com/Reconnexion4845/Mes-Coffrets/main/Coffrets.xlsx";
-            fetch(githubFileUrl)
-                .then(response => {
-                    if (!response.ok) throw new Error("Fichier non trouvé");
-                    return response.arrayBuffer();
-                })
-                .then(data => {
-                    const workbook = XLSX.read(new Uint8Array(data), { type: "array" });
-                    const sheet = workbook.Sheets["Coffrets"];
-                    if (!sheet) return;
-                    const rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval: ""});
-                    coffrets = [];
-                    for(let i=1; i<rows.length; i++) {
-                        const row = rows[i];
-                        if (!row[0]) continue;
-                        let nom = row[0];
-                        let rawPrix = row[4];
-                        let prix = 0;
-                        if (typeof rawPrix === 'string') {
-                            prix = parseFloat(rawPrix.replace(",", ".")) || 0;
-                        } else if (typeof rawPrix === 'number') {
-                            prix = rawPrix;
-                        }
-                        let lignesB = splitLines(row[1]);
-                        let lignesC = splitLines(row[2]);
-                        let lignesD = splitLines(row[3]);
-                        let nbProduits = Math.max(lignesB.length, lignesC.length, lignesD.length);
-                        let produits = [];
-                        for (let l=0; l<nbProduits; l++) {
-                            let quantite = lignesB[l] !== undefined ? lignesB[l] : "";
-                            let code = lignesC[l] !== undefined ? lignesC[l] : "";
-                            let nomProd = lignesD[l] !== undefined ? lignesD[l] : "";
-                            if (quantite || code || nomProd)
-                                produits.push({ quantite, code, nom: nomProd });
-                        }
-                        coffrets.push({ nom, prix, produits, quantite: 0, idx: i });
-                    }
-                    afficherCoffrets();
-                })
-                .catch(e => {
-                    console.warn("Erreur chargement Coffrets.xlsx :", e.message);
-                    document.getElementById("file-input").style.display = "inline-block";
-                });
-        });
+    function splitLines(cell) {
+        if (cell === null || cell === undefined) return [];
+        return String(cell).split(/\r\n|\n|\r/);
+    }
 
-        document.getElementById('file-input').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if(!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e2) {
-                const data = new Uint8Array(e2.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const sheet = workbook.Sheets["Coffrets"];
-                if (!sheet) return;
-                const rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval: ""});
-                coffrets = [];
-                for(let i=1; i<rows.length; i++) {
-                    const row = rows[i];
-                    if (!row[0]) continue;
-                    let nom = row[0];
-                    let rawPrix = row[4];
-                    let prix = 0;
-                    if (typeof rawPrix === 'string') {
-                        prix = parseFloat(rawPrix.replace(",", ".")) || 0;
-                    } else if (typeof rawPrix === 'number') {
-                        prix = rawPrix;
-                    }
-                    let lignesB = splitLines(row[1]);
-                    let lignesC = splitLines(row[2]);
-                    let lignesD = splitLines(row[3]);
-                    let nbProduits = Math.max(lignesB.length, lignesC.length, lignesD.length);
-                    let produits = [];
-                    for (let l=0; l<nbProduits; l++) {
-                        let quantite = lignesB[l] !== undefined ? lignesB[l] : "";
-                        let code = lignesC[l] !== undefined ? lignesC[l] : "";
-                        let nomProd = lignesD[l] !== undefined ? lignesD[l] : "";
-                        if (quantite || code || nomProd)
-                            produits.push({ quantite, code, nom: nomProd });
-                    }
-                    coffrets.push({ nom, prix, produits, quantite: 0, idx: i });
+    // Charge automatique depuis GitHub
+    window.addEventListener("load", () => {
+        const githubFileUrl = "https://raw.githubusercontent.com/Reconnexion4845/Mes-Coffrets/main/Coffrets.xlsx";
+        fetch(githubFileUrl)
+          .then(response => {
+              if (!response.ok) throw new Error("Fichier non trouvé");
+              return response.arrayBuffer();
+          })
+          .then(data => {
+              const workbook = XLSX.read(new Uint8Array(data), { type: "array" });
+              const sheet = workbook.Sheets["Coffrets"];
+              if (!sheet) return;
+              const rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval: ""});
+              coffrets = [];
+              for(let i=1; i<rows.length; i++) {
+                  const row = rows[i];
+                  if (!row[0]) continue;
+                  let nom = row[0];
+                  let rawPrix = row[4];
+                  let prix = 0;
+                  if (typeof rawPrix === 'string') {
+                      prix = parseFloat(rawPrix.replace(",", ".")) || 0;
+                  } else if (typeof rawPrix === 'number') {
+                      prix = rawPrix;
+                  }
+                  let lignesB = splitLines(row[1]);
+                  let lignesC = splitLines(row[2]);
+                  let lignesD = splitLines(row[3]);
+                  let nbProduits = Math.max(lignesB.length, lignesC.length, lignesD.length);
+                  let produits = [];
+                  for (let l=0; l<nbProduits; l++) {
+                      let quantite = lignesB[l] !== undefined ? lignesB[l] : "";
+                      let code = lignesC[l] !== undefined ? lignesC[l] : "";
+                      let nomProd = lignesD[l] !== undefined ? lignesD[l] : "";
+                      if (quantite || code || nomProd) produits.push({ quantite, code, nom: nomProd });
+                  }
+                  coffrets.push({ nom, prix, produits, quantite: 0, idx: i });
+              }
+              afficherCoffrets();
+          })
+          .catch(e => {
+              console.warn("Erreur chargement Coffrets.xlsx :", e.message);
+              document.getElementById("file-input").style.display = "inline-block";
+          });
+    });
+
+    document.getElementById('file-input').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e2) {
+            const data = new Uint8Array(e2.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const sheet = workbook.Sheets["Coffrets"];
+            if (!sheet) return;
+            const rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval: ""});
+            coffrets = [];
+            for(let i=1; i<rows.length; i++) {
+                const row = rows[i];
+                if (!row[0]) continue;
+                let nom = row[0];
+                let rawPrix = row[4];
+                let prix = 0;
+                if (typeof rawPrix === 'string') {
+                    prix = parseFloat(rawPrix.replace(",", ".")) || 0;
+                } else if (typeof rawPrix === 'number') {
+                    prix = rawPrix;
                 }
-                afficherCoffrets();
-            };
-            reader.readAsArrayBuffer(file);
-        });
-
-        function afficherCoffrets() {
-            const container = document.getElementById('coffrets-container');
-            container.innerHTML = '';
-            coffrets.forEach((coffret) => {
-                const row = document.createElement('div');
-                row.className = 'coffret-row';
-                const input = document.createElement('input');
-                input.type = 'number'; input.min = '0'; input.value = '0';
-                input.className = 'coffret-quantite';
-                coffret.quantite = 0;
-                input.addEventListener('input', function() {
-                    coffret.quantite = parseInt(input.value) || 0;
-                    calculerPrixTotal();
-                });
-                row.appendChild(input);
-                const block = document.createElement('div');
-                block.className = 'coffret-block';
-                const header = document.createElement('div');
-                header.className = 'coffret-header';
-                header.innerHTML = `<span class="coffret-titre">${coffret.nom}</span>
-                                    <span class="coffret-prix">${coffret.prix.toFixed(2)} €</span>`;
-                block.appendChild(header);
-                const table = document.createElement('table');
-                table.className = 'coffret-produits-table';
-                coffret.produits.forEach(prod => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML =
-                        `<td>${prod.quantite}</td>
-                         <td>${prod.code}</td>
-                         <td>${prod.nom}</td>`;
-                    table.appendChild(tr);
-                });
-                block.appendChild(table);
-                row.appendChild(block);
-                container.appendChild(row);
-            });
-            calculerPrixTotal();
-        }
-
-        function calculerPrixTotal() {
-            totalPrix = 0;
-            coffrets.forEach(c => {
-                totalPrix += (c.quantite || 0) * c.prix;
-            });
-            document.getElementById('price-total').innerText = "Prix à payer : " + totalPrix.toFixed(2) + " €";
-        }
-
-        function annulerCommande() {
-            coffrets.forEach(c => c.quantite = 0);
+                let lignesB = splitLines(row[1]);
+                let lignesC = splitLines(row[2]);
+                let lignesD = splitLines(row[3]);
+                let nbProduits = Math.max(lignesB.length, lignesC.length, lignesD.length);
+                let produits = [];
+                for (let l=0; l<nbProduits; l++) {
+                    let quantite = lignesB[l] !== undefined ? lignesB[l] : "";
+                    let code = lignesC[l] !== undefined ? lignesC[l] : "";
+                    let nomProd = lignesD[l] !== undefined ? lignesD[l] : "";
+                    if (quantite || code || nomProd) produits.push({ quantite, code, nom: nomProd });
+                }
+                coffrets.push({ nom, prix, produits, quantite: 0, idx: i });
+            }
             afficherCoffrets();
-            document.getElementById('commande-form').reset();
-            document.getElementById('form-error').style.display = "none";
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    function afficherCoffrets() {
+        const container = document.getElementById('coffrets-container');
+        container.innerHTML = '';
+        coffrets.forEach((coffret) => {
+            const row = document.createElement('div');
+            row.className = 'coffret-row';
+            const input = document.createElement('input');
+            input.type = 'number'; input.min = '0'; input.value = '0';
+            input.className = 'coffret-quantite';
+            coffret.quantite = 0;
+            input.addEventListener('input', function() {
+                coffret.quantite = parseInt(input.value) || 0;
+                calculerPrixTotal();
+            });
+            row.appendChild(input);
+            const block = document.createElement('div');
+            block.className = 'coffret-block';
+            const header = document.createElement('div');
+            header.className = 'coffret-header';
+            header.innerHTML = `<span class="coffret-titre">${coffret.nom}</span>
+                                <span class="coffret-prix">${coffret.prix.toFixed(2)} €</span>`;
+            block.appendChild(header);
+            const table = document.createElement('table');
+            table.className = 'coffret-produits-table';
+            coffret.produits.forEach(prod => {
+                const tr = document.createElement('tr');
+                tr.innerHTML =
+                    `<td>${prod.quantite}</td>
+                     <td>${prod.code}</td>
+                     <td>${prod.nom}</td>`;
+                table.appendChild(tr);
+            });
+            block.appendChild(table);
+            row.appendChild(block);
+            container.appendChild(row);
+        });
+        calculerPrixTotal();
+    }
+
+    function calculerPrixTotal() {
+        totalPrix = 0;
+        coffrets.forEach(c => {
+            totalPrix += (c.quantite || 0) * c.prix;
+        });
+        document.getElementById('price-total').innerText = "Prix à payer : " + totalPrix.toFixed(2) + " €";
+    }
+
+    function annulerCommande() {
+        coffrets.forEach(c => c.quantite = 0);
+        afficherCoffrets();
+        document.getElementById('commande-form').reset();
+        document.getElementById('form-error').style.display = "none";
+    }
+
+    document.getElementById('commande-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const errorDiv = document.getElementById('form-error');
+        errorDiv.style.display = "none";
+        errorDiv.innerText = "";
+
+        const nomPrenom = document.getElementById('nom_prenom').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const tel = document.getElementById('tel').value.trim();
+        const infos = document.getElementById('infos').value.trim();
+
+        if (!nomPrenom || !email || !tel) {
+            errorDiv.style.display = "block";
+            errorDiv.innerText = "Veuillez renseigner tous les champs obligatoires (*)";
+            return;
         }
 
-        document.getElementById('commande-form').addEventListener('submit', function(event) {
-            event.preventDefault();
-            const errorDiv = document.getElementById('form-error');
-            errorDiv.style.display = "none";
-            errorDiv.innerText = "";
+        if (totalPrix <= 0) {
+            errorDiv.style.display = "block";
+            errorDiv.innerText = "Le montant à payer doit être supérieur à zéro pour valider la commande.";
+            return;
+        }
 
-            // Vérifier champs obligatoires
-            const nomPrenom = document.getElementById('nom_prenom').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const tel = document.getElementById('tel').value.trim();
-            if (!nomPrenom || !email || !tel) {
-                errorDiv.style.display = "block";
-                errorDiv.innerText = "Veuillez renseigner tous les champs obligatoires (*)";
-                return;
-            }
+        // Prépare les coffrets à envoyer, uniquement ceux avec quantité > 0
+        let coffretsCommandes = coffrets
+            .filter(c => Number(c.quantite) > 0)
+            .map(c => ({ quantite: c.quantite, nom: c.nom, prix: c.prix }));
 
-            // Vérifier montant à payer
-            if (totalPrix <= 0) {
-                errorDiv.style.display = "block";
-                errorDiv.innerText = "Le montant à payer doit être supérieur à zéro pour valider la commande.";
-                return;
-            }
+        const payload = {
+            nom_prenom: nomPrenom,
+            email: email,
+            tel: tel,
+            infos: infos,
+            montant_total: totalPrix,
+            coffrets: coffretsCommandes
+        };
 
-            // Redirection vers merci.html
+        fetch(GOOGLE_APPS_SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        })
+        .then(() => {
             window.location.href = "merci.html";
+        })
+        .catch(() => {
+            errorDiv.style.display = "block";
+            errorDiv.innerText = "Erreur lors de l'envoi de la commande.";
         });
-    </script>
+    });
+</script>
 </body>
 </html>
