@@ -95,7 +95,7 @@
     </form>
 <script>
     // lien de ton Apps Script Web App (à modifier avec ton déploiement exact)
-    const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwOseK0R5lJ_voX1-YiqsEBtWum1i4ETMDoNT00QGeUu3tpl_gISTRXKJdp-L1P5bXp/exec";
+    const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyijamioJT6nil9BYyHCXNt3bWOWrRYat7EkXd1ApiF0StUpBvW1mAYED4dMFu1x6EV/exec";
 
     let coffrets = [];
     let totalPrix = 0;
@@ -245,11 +245,14 @@
         document.getElementById('form-error').style.display = "none";
     }
 
+    // Ajout gestion soumission avec changement du bouton ainsi que désactivation
     document.getElementById('commande-form').addEventListener('submit', function(event) {
         event.preventDefault();
         const errorDiv = document.getElementById('form-error');
         errorDiv.style.display = "none";
         errorDiv.innerText = "";
+
+        const btn = document.getElementById('commande-btn');
 
         const nomPrenom = document.getElementById('nom_prenom').value.trim();
         const email = document.getElementById('email').value.trim();
@@ -267,6 +270,10 @@
             errorDiv.innerText = "Le montant à payer doit être supérieur à zéro pour valider la commande.";
             return;
         }
+
+        // Désactive le bouton et change libellé après validation formulaire
+        btn.disabled = true;
+        btn.innerText = "Commande en cours";
 
         // Prépare les coffrets à envoyer, uniquement ceux avec quantité > 0
         let coffretsCommandes = coffrets
@@ -294,6 +301,9 @@
         .catch(() => {
             errorDiv.style.display = "block";
             errorDiv.innerText = "Erreur lors de l'envoi de la commande.";
+            // Réactive le bouton en cas d'erreur
+            btn.disabled = false;
+            btn.innerText = "Passer la commande";
         });
     });
 </script>
