@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Coffrets - Commande</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .coffret-row { display: flex; align-items: center; margin-bottom: 32px; }
+        .coffret-quantite { width: 45px; margin-right: 30px; text-align: center; height: 34px; font-size: 1.15em; }
+        .coffret-block { display: flex; align-items: center; }
+        .coffret-header { display: flex; flex-direction: column; align-items: flex-end; justify-content: center;
+            min-width: 170px; height: 100%; padding-right: 18px; box-sizing: border-box; }
+        .coffret-titre { color: #b20000; font-weight: bold; font-size: 1.2em; }
+        .coffret-prix { font-weight: bold; color: #222; font-size: 1.06em; margin-top: 4px; }
+        .coffret-produits-table { border-collapse: collapse; margin-left: 10px; }
+        .coffret-produits-table td { color: #222; font-family: monospace;
+            padding: 3px 9px 3px 0; vertical-align: middle; border: none; }
+        #price-total { font-size: 1.15em; font-weight: bold; margin: 20px 0 15px 0; color: #222; }
+        .action-btns { margin-top: 20px; }
+        .action-btns button { width: 160px; margin: 0 12px; padding: 10px; font-size: 1em; }
+        .file-zone { margin-bottom: 30px; }
+    </style>
+</head>
+<body>
+    <div class="file-zone">
+        <h2>Importer vos coffrets (Coffrets.xlsx)</h2>
+        <input type="file" id="file-input" accept=".xlsx">
+    </div>
+    <div id="coffrets-container"></div>
+    <div id="price-total"></div>
+    <div class="action-btns">
+        <button onclick="passerCommande()">Passer la commande</button>
+        <button onclick="annulerCommande()">Annuler</button>
+    </div>
+    <script>
+        let coffrets = [];
+
+        function splitLines(cell) {
+            // Découpe en lignes, gère tous types de retour Excel (merci à forum.uipath.com[web:11])
+            if (cell === null || cell === undefined) return [];
+            return String(cell).split(/\r\n|\n|\r/);
+        }
+
+        document.getElementById('file-input').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e2) {
+                const data = new Uint8Array(e2.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheet = workbook.Sheets["Coffrets"];
+
+                // Extraction brute (lignes, colonnes)
+                const rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval: ""});
+                coffrets = [];
+                for(let i=1; i<rows.length; i++) { // start at 1 (skip headers)
+                    const row = rows[i];
+                    if (!row[0]) continue; // ignorer lignes vides
+                    // Nom coffret et prix
+                    let nom = row[0];
+                    let rawPrix = row[4];
+                    let prix = 0;
+                    if (typeof rawPrix === 'string') {
+                        prix = parseFloat(rawPrix.replace(",", ".")) || 0;
+                    } else if (typeof rawPrix === 'number') {
+                        prix = rawPrix;
+                    }
+                    // Split lignes produits
+                    let lignesB = splitLines(row[1]);
+                    let lignesC = splitLines(row[2]);
+                    let lignesD = splitLines(row[3]);
+                    // Le nombre de produits = max des longueurs B, C, D
+                    let nbProduits = Math.max(lignesB.length, lignesC.length, lignesD.length);
+                    let produits = [];
+                    for (let l=0; l<nbProduits; l++) {
+                        let quantite = lignesB[l] !== undefined ? lignesB[l] : "";
+                        let code = lignesC[l] !== undefined ? lignesC[l] : "";
+                        let nomProd = lignesD[l] !== undefined ? lignesD[l] : "";
+                        // N'afficher que si produit non vide
+                        if (quantite || code || nomProd)
+                            produits.push({ quantite, code, nom: nomProd });
+                    }
+                    coffrets.push({ nom, prix, produits, quantite: 0, idx: i });
+                }
+                afficherCoffrets();
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function afficherCoffrets() {
+            const container = document.getElementById('coffrets-container');
+            container.innerHTML = '';
+            coffrets.forEach(coffret => {
+                // Create row
+                const row = document.createElement('div');
+                row.className = 'coffret-row';
+                // Quantité input
+                const input = document.createElement('input');
+                input.type = 'number'; input.min = '0'; input.value = '0';
+                input.className = 'coffret-quantite';
+                coffret.quantite = 0;
+                input.addEventListener('input', function() {
+                    coffret.quantite = parseInt(input.value) || 0;
+                    calculerPrixTotal();
+                });
+                row.appendChild(input);
+                // Bloc principal
+                const block = document.createElement('div');
+                block.className = 'coffret-block';
+                // Nom/prix
+                const header = document.createElement('div');
+                header.className = 'coffret-header';
+                header.innerHTML = `<span class="coffret-titre">${coffret.nom}</span>
+                                    <span class="coffret-prix">${coffret.prix.toFixed(2)} €</span>`;
+                block.appendChild(header);
+                // Tableau produits
+                const table = document.createElement('table');
+                table.className = 'coffret-produits-table';
+                coffret.produits.forEach(prod => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML =
+                        `<td>${prod.quantite}</td>
+                         <td>${prod.code}</td>
+                         <td>${prod.nom}</td>`;
+                    table.appendChild(tr);
+                });
+                block.appendChild(table);
+                row.appendChild(block);
+                container.appendChild(row);
+            });
+            calculerPrixTotal();
+        }
+
+        function calculerPrixTotal() {
+            let total = 0;
+            coffrets.forEach(c => {
+                total += (c.quantite || 0) * c.prix;
+            });
+            document.getElementById('price-total').innerText = "Prix à payer : " + total.toFixed(2) + " €";
+        }
+
+        function passerCommande() {
+            alert("Commande validée !");
+            // Ajoutez votre logique
+        }
+        function annulerCommande() {
+            coffrets.forEach(c => c.quantite = 0);
+            afficherCoffrets();
+        }
+    </script>
+</body>
+</html>
