@@ -5,7 +5,6 @@
     <title>Commandez mes Coffrets</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
     <style>
-        /* Styles inchangés… */
         body { font-family: Arial, sans-serif; }
         h1 { color: #b20000; font-size: 2em; margin-top: 28px; }
         .coffret-row { display: flex; align-items: center; margin-bottom: 32px; }
@@ -41,19 +40,18 @@
         <h2>Importer vos coffrets (Coffrets.xlsx)</h2>
         <input type="file" id="file-input" accept=".xlsx" style="display:none;">
         <div class="instructions">
-            <!-- instructions inchangées… -->
             <div><strong>Voici la marche à suivre :</strong></div>
             <div style="margin: 10px 0 6px 0;">
                 <strong>1. Remplissez le formulaire ci-dessous</strong>
                 <ul style="margin: 4px 0 0 10px; padding-left: 18px;">
                     <li>Indiquez la <strong>quantité souhaitée</strong> devant chaque coffret que vous souhaitez commander.</li>
                     <li>Le <strong>montant à payer</strong> s’affichera au-dessus du bouton de commande.</li>
-                    <li>Si l’un des coffrets choisis contient un <strong>bon cadeau</strong>, veuillez préciser dans le champ "<strong>Infos complémentaires</strong>" <br>pour qui est le bon et de la part de qui.</li>
-                    <li>Et cliquez sur <strong>« Passer la commande »</strong>.</li>
+                    <li>Si un coffret choisi contient un <strong>bon cadeau</strong>, précisez-le dans le champ "<strong>Infos complémentaires</strong>"<br>avec pour qui et de la part de qui.</li>
+                    <li>Cliquez sur <strong>« Passer la commande »</strong>.</li>
                 </ul>
             </div>
             <div style="margin: 10px 0 6px 0;">
-                <strong>2. Effectuez ensuite le <span style="color:#000000;">paiement par virement</span></strong> sur le compte de l'institut<br />
+                <strong>2. Effectuez le <span style="color:#000000;">paiement par virement</span></strong> sur le compte de l'institut<br />
                 <strong>BE08 3631 9500 6113</strong> au nom de <strong>Victoria Winkin (Reconnexion)</strong>,<br />
                 avec la communication suivante : Coffrets + vos nom et prénom.
             </div>
@@ -94,8 +92,7 @@
         </div>
     </form>
 <script>
-    // lien de ton Apps Script Web App (à modifier avec ton déploiement exact)
-    const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwOseK0R5lJ_voX1-YiqsEBtWum1i4ETMDoNT00QGeUu3tpl_gISTRXKJdp-L1P5bXp/exec";
+    const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwCznb2pBst9d-gtTx9H1DhFPNUlg93fAhOeqWGiEut1qEWcTQCerlVT8SkDeTzUOkZ/exec";
 
     let coffrets = [];
     let totalPrix = 0;
@@ -105,7 +102,6 @@
         return String(cell).split(/\r\n|\n|\r/);
     }
 
-    // Charge automatique depuis GitHub
     window.addEventListener("load", () => {
         const githubFileUrl = "https://raw.githubusercontent.com/Reconnexion4845/Mes-Coffrets/main/Coffrets.xlsx";
         fetch(githubFileUrl)
@@ -245,7 +241,14 @@
         document.getElementById('form-error').style.display = "none";
     }
 
-    // Ajout gestion soumission avec changement du bouton ainsi que désactivation
+    function buildLignesCoffret() {
+        // Construit le texte concaténé des coffrets commandés comme "quantite Nom (prix €)" sur plusieurs lignes
+        return coffrets
+          .filter(c => Number(c.quantite) > 0)
+          .map(c => `${c.quantite} ${c.nom} (${c.prix} €)`)
+          .join('\n');
+    }
+
     document.getElementById('commande-form').addEventListener('submit', function(event) {
         event.preventDefault();
         const errorDiv = document.getElementById('form-error');
@@ -271,14 +274,26 @@
             return;
         }
 
-        // Désactive le bouton et change libellé après validation formulaire
         btn.disabled = true;
         btn.innerText = "Commande en cours";
 
-        // Prépare les coffrets à envoyer, uniquement ceux avec quantité > 0
         let coffretsCommandes = coffrets
             .filter(c => Number(c.quantite) > 0)
             .map(c => ({ quantite: c.quantite, nom: c.nom, prix: c.prix }));
+
+        // Préparer le détail complet des coffrets avec leurs produits
+        let coffretsDetails = coffrets
+            .filter(c => Number(c.quantite) > 0)
+            .map(c => ({
+                nom: c.nom,
+                quantite: c.quantite,
+                produits: c.produits.map(p => ({
+                    nom: p.nom,
+                    quantite: Number(p.quantite) || 0
+                }))
+            }));
+
+        const lignesCoffret = buildLignesCoffret();
 
         const payload = {
             nom_prenom: nomPrenom,
@@ -286,7 +301,9 @@
             tel: tel,
             infos: infos,
             montant_total: totalPrix,
-            coffrets: coffretsCommandes
+            coffrets: coffretsCommandes,
+            lignes_coffret: lignesCoffret,
+            coffrets_details: coffretsDetails
         };
 
         fetch(GOOGLE_APPS_SCRIPT_URL, {
@@ -301,7 +318,6 @@
         .catch(() => {
             errorDiv.style.display = "block";
             errorDiv.innerText = "Erreur lors de l'envoi de la commande.";
-            // Réactive le bouton en cas d'erreur
             btn.disabled = false;
             btn.innerText = "Passer la commande";
         });
