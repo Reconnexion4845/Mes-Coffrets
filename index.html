@@ -92,18 +92,18 @@
         </div>
     </form>
 <script>
-    const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNAmSom41TjvRrCsizDh78shW-jwgVss805T3qd0BEuGOO_5esCC8brNZAEA5TeT0/exec";
-
+    const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyy3_rgTeG1tCKc1vArDEantMSO6VP0u3jLQX6R2CO7PiY1N_ECTDvKKn-kJsWmz-Ms/exec";
+ 
     let coffrets = [];
     let totalPrix = 0;
-
+ 
     function splitLines(cell) {
         if (cell === null || cell === undefined) return [];
         return String(cell).split(/\r\n|\n|\r/);
     }
-
+ 
     window.addEventListener("load", () => {
-        const githubFileUrl = "https://raw.githubusercontent.com/Reconnexion4845/Mes-Coffrets/main/Coffrets.xlsx";
+        const githubFileUrl = "[https://raw.githubusercontent.com/Reconnexion4845/Mes-Coffrets/main/Coffrets.xlsx](https://raw.githubusercontent.com/Reconnexion4845/Mes-Coffrets/main/Coffrets.xlsx)";
         fetch(githubFileUrl)
           .then(response => {
               if (!response.ok) throw new Error("Fichier non trouvé");
@@ -129,13 +129,16 @@
                   let lignesB = splitLines(row[1]);
                   let lignesC = splitLines(row[2]);
                   let lignesD = splitLines(row[3]);
-                  let nbProduits = Math.max(lignesB.length, lignesC.length, lignesD.length);
+                  let lignesF = splitLines(row[5]); // <-- Colonne F ajoutée, codes article
+                  let nbProduits = Math.max(lignesB.length, lignesC.length, lignesD.length, lignesF.length);
                   let produits = [];
                   for (let l=0; l<nbProduits; l++) {
                       let quantite = lignesB[l] !== undefined ? lignesB[l] : "";
                       let code = lignesC[l] !== undefined ? lignesC[l] : "";
                       let nomProd = lignesD[l] !== undefined ? lignesD[l] : "";
-                      if (quantite || code || nomProd) produits.push({ quantite, code, nom: nomProd });
+                      let codeArticle = lignesF[l] !== undefined ? lignesF[l] : "";
+                      if (quantite || code || nomProd || codeArticle)
+                        produits.push({ quantite, code, nom: nomProd, code_article: codeArticle });
                   }
                   coffrets.push({ nom, prix, produits, quantite: 0, idx: i });
               }
@@ -146,7 +149,7 @@
               document.getElementById("file-input").style.display = "inline-block";
           });
     });
-
+ 
     document.getElementById('file-input').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if(!file) return;
@@ -172,13 +175,16 @@
                 let lignesB = splitLines(row[1]);
                 let lignesC = splitLines(row[2]);
                 let lignesD = splitLines(row[3]);
-                let nbProduits = Math.max(lignesB.length, lignesC.length, lignesD.length);
+                let lignesF = splitLines(row[5]); // <-- Colonne F, codes article
+                let nbProduits = Math.max(lignesB.length, lignesC.length, lignesD.length, lignesF.length);
                 let produits = [];
                 for (let l=0; l<nbProduits; l++) {
                     let quantite = lignesB[l] !== undefined ? lignesB[l] : "";
                     let code = lignesC[l] !== undefined ? lignesC[l] : "";
                     let nomProd = lignesD[l] !== undefined ? lignesD[l] : "";
-                    if (quantite || code || nomProd) produits.push({ quantite, code, nom: nomProd });
+                    let codeArticle = lignesF[l] !== undefined ? lignesF[l] : "";
+                    if (quantite || code || nomProd || codeArticle)
+                      produits.push({ quantite, code, nom: nomProd, code_article: codeArticle });
                 }
                 coffrets.push({ nom, prix, produits, quantite: 0, idx: i });
             }
@@ -186,7 +192,7 @@
         };
         reader.readAsArrayBuffer(file);
     });
-
+ 
     function afficherCoffrets() {
         const container = document.getElementById('coffrets-container');
         container.innerHTML = '';
@@ -216,7 +222,8 @@
                 tr.innerHTML =
                     `<td>${prod.quantite}</td>
                      <td>${prod.code}</td>
-                     <td>${prod.nom}</td>`;
+                     <td>${prod.nom}</td>
+                     <td>${prod.code_article}</td>`; // Ajout colonne code article dans affichage si besoin
                 table.appendChild(tr);
             });
             block.appendChild(table);
@@ -225,7 +232,7 @@
         });
         calculerPrixTotal();
     }
-
+ 
     function calculerPrixTotal() {
         totalPrix = 0;
         coffrets.forEach(c => {
@@ -233,14 +240,14 @@
         });
         document.getElementById('price-total').innerText = "Prix à payer : " + totalPrix.toFixed(2) + " €";
     }
-
+ 
     function annulerCommande() {
         coffrets.forEach(c => c.quantite = 0);
         afficherCoffrets();
         document.getElementById('commande-form').reset();
         document.getElementById('form-error').style.display = "none";
     }
-
+ 
     function buildLignesCoffret() {
         // Construit le texte concaténé des coffrets commandés comme "quantite Nom (prix €)" sur plusieurs lignes
         return coffrets
@@ -248,40 +255,40 @@
           .map(c => `${c.quantite} ${c.nom} (${c.prix} €)`)
           .join('\n');
     }
-
+ 
     document.getElementById('commande-form').addEventListener('submit', function(event) {
         event.preventDefault();
         const errorDiv = document.getElementById('form-error');
         errorDiv.style.display = "none";
         errorDiv.innerText = "";
-
+ 
         const btn = document.getElementById('commande-btn');
-
+ 
         const nomPrenom = document.getElementById('nom_prenom').value.trim();
         const email = document.getElementById('email').value.trim();
         const tel = document.getElementById('tel').value.trim();
         const infos = document.getElementById('infos').value.trim();
-
+ 
         if (!nomPrenom || !email || !tel) {
             errorDiv.style.display = "block";
             errorDiv.innerText = "Veuillez renseigner tous les champs obligatoires (*)";
             return;
         }
-
+ 
         if (totalPrix <= 0) {
             errorDiv.style.display = "block";
             errorDiv.innerText = "Le montant à payer doit être supérieur à zéro pour valider la commande.";
             return;
         }
-
+ 
         btn.disabled = true;
         btn.innerText = "Commande en cours";
-
+ 
         let coffretsCommandes = coffrets
             .filter(c => Number(c.quantite) > 0)
             .map(c => ({ quantite: c.quantite, nom: c.nom, prix: c.prix }));
-
-        // Préparer le détail complet des coffrets avec leurs produits
+ 
+        // Préparer le détail complet des coffrets avec leurs produits et code article
         let coffretsDetails = coffrets
             .filter(c => Number(c.quantite) > 0)
             .map(c => ({
@@ -289,12 +296,13 @@
                 quantite: c.quantite,
                 produits: c.produits.map(p => ({
                     nom: p.nom,
-                    quantite: Number(p.quantite) || 0
+                    quantite: Number(p.quantite) || 0,
+                    code_article: p.code_article // Nouvelle ligne
                 }))
             }));
-
+ 
         const lignesCoffret = buildLignesCoffret();
-
+ 
         const payload = {
             nom_prenom: nomPrenom,
             email: email,
@@ -305,7 +313,7 @@
             lignes_coffret: lignesCoffret,
             coffrets_details: coffretsDetails
         };
-
+ 
         fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: "POST",
             mode: "no-cors",
