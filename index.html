@@ -217,14 +217,14 @@
             block.appendChild(header);
             const table = document.createElement('table');
             table.className = 'coffret-produits-table';
-            coffret.produits.forEach(prod => {
-                const tr = document.createElement('tr');
-                tr.innerHTML =
-                    `<td>${prod.quantite}</td>
-                     <td>${prod.code}</td>
-                     <td>${prod.nom}</td>`;
-                table.appendChild(tr);
-            });
+			coffret.produits.forEach(prod => {
+				const tr = document.createElement('tr');
+				tr.innerHTML =
+					`<td>${prod.quantite}</td>
+					 <td>${prod.code}</td>
+					 <td>${prod.nom}</td>`;
+				table.appendChild(tr);
+			});
             block.appendChild(table);
             row.appendChild(block);
             container.appendChild(row);
