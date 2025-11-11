@@ -103,7 +103,7 @@
     }
  
     window.addEventListener("load", () => {
-        const githubFileUrl = "[https://raw.githubusercontent.com/Reconnexion4845/Mes-Coffrets/main/Coffrets.xlsx](https://raw.githubusercontent.com/Reconnexion4845/Mes-Coffrets/main/Coffrets.xlsx)";
+        const githubFileUrl = "https://raw.githubusercontent.com/Reconnexion4845/Mes-Coffrets/main/Coffrets.xlsx";
         fetch(githubFileUrl)
           .then(response => {
               if (!response.ok) throw new Error("Fichier non trouvé");
